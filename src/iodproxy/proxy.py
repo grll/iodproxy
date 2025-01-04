@@ -7,6 +7,7 @@ from mcp.types import (
     JSONRPCNotification,
     JSONRPCRequest,
     JSONRPCResponse,
+    JSONRPCError,
 )
 from omproxy.proxy import StdioProxy
 
@@ -30,7 +31,7 @@ class IODProxy(StdioProxy):
         self,
         initiator: Literal["client", "server"],
         request: JSONRPCRequest,
-        future: asyncio.Future[JSONRPCResponse],
+        future: asyncio.Future[JSONRPCResponse | JSONRPCError],
     ):
         """an async function running as a concurrent task per request to enable better logging"""
         with self.logger.span(
@@ -39,10 +40,16 @@ class IODProxy(StdioProxy):
         ):
             try:
                 response = await asyncio.wait_for(future, timeout=self.timeout)
-                self.logger.info(
-                    "response received",
-                    json_rpc_response=response,
-                )
+                if isinstance(response, JSONRPCError):
+                    self.logger.info(
+                        "error received",
+                        json_rpc_error=response,
+                    )
+                else:
+                    self.logger.info(
+                        "response received",
+                        json_rpc_response=response,
+                    )
             except asyncio.TimeoutError:
                 self.logger.error(f"request timed out after {self.timeout} seconds")
             except asyncio.CancelledError:
@@ -62,7 +69,9 @@ class IODProxy(StdioProxy):
             )
             self.active_requests[message.root.id] = (task, future)
 
-        elif isinstance(message.root, JSONRPCResponse):
+        elif isinstance(message.root, JSONRPCResponse) or isinstance(
+            message.root, JSONRPCError
+        ):
             try:
                 _, future = self.active_requests[message.root.id]
                 future.set_result(message.root)
@@ -72,7 +81,8 @@ class IODProxy(StdioProxy):
                     _exc_info=KeyError,
                 )
                 self.logger.info(
-                    "orphan response received", json_rpc_response=message.root
+                    "orphan response or error received",
+                    json_rpc_response_or_error=message.root,
                 )
 
         elif isinstance(message.root, JSONRPCNotification):
