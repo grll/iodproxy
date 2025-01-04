@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import Literal
 
 from mcp.client.stdio import StdioServerParameters
@@ -145,7 +146,6 @@ if __name__ == "__main__":
     with proxy.logger.span("proxy session") as span:
         proxy.run(
             StdioServerParameters(
-                command="uv",
-                args=["run", "src/echo.py"],
+                command="uv", args=["run", "src/echo.py"], env=os.environ
             )
         )
