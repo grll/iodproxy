@@ -3,11 +3,11 @@ from typing import Literal
 
 from mcp.client.stdio import StdioServerParameters
 from mcp.types import (
+    JSONRPCError,
     JSONRPCMessage,
     JSONRPCNotification,
     JSONRPCRequest,
     JSONRPCResponse,
-    JSONRPCError,
 )
 from omproxy.proxy import StdioProxy
 
@@ -26,6 +26,8 @@ class IODProxy(StdioProxy):
         self.timeout = timeout
 
         self.active_requests: dict[str, tuple[asyncio.Task, asyncio.Future]] = {}
+        self.already_logged_methods: set[str] = set()
+        self.responses_to_ignore: set[str | int] = set()
 
     async def _handle_request(
         self,
@@ -96,6 +98,17 @@ class IODProxy(StdioProxy):
 
     def _on_mcp_client_message(self, message: JSONRPCMessage):
         """can be used to handle messages from the MCP client"""
+
+        # Claude Desktop App is polling for resources/list and prompts/list
+        # we just log the first request to avoid spamming logfire with useless logs
+        if isinstance(message.root, JSONRPCRequest):
+            method = message.root.method
+            if method in ["resources/list", "prompts/list"]:
+                if method in self.already_logged_methods:
+                    self.responses_to_ignore.add(message.root.id)
+                    return
+                self.already_logged_methods.add(method)
+
         self._process_message("client", message)
 
     def _on_mcp_server_message(self, message: JSONRPCMessage | Exception):
@@ -105,6 +118,16 @@ class IODProxy(StdioProxy):
                 "Exception object received from MCP Server.", _exc_info=message
             )
         else:  # JSONRPCMessage
+            # Claude Desktop App is polling for resources/list and prompts/list
+            # we just log the first request to avoid spamming logfire with useless logs
+            if isinstance(message.root, JSONRPCResponse) or isinstance(
+                message.root, JSONRPCError
+            ):
+                id = message.root.id
+                if id in self.responses_to_ignore:
+                    self.responses_to_ignore.remove(id)
+                    return
+
             self._process_message("server", message)
 
     def _on_start(self):
