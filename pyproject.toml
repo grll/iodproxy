@@ -1,0 +1,26 @@
+[project]
+name = "iodproxy"
+dynamic = ["version"]
+description = "A proxy for IOD MCP servers"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "logfire>=2.11.1",
+    "omproxy>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/iodproxy/__init__.py"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.1",
+    "ruff>=0.8.5",
+]
+
+[project.scripts]
+iodproxy = "iodproxy.cli:main"
