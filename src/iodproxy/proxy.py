@@ -38,7 +38,7 @@ class IODProxy(StdioProxy):
     ):
         """an async function running as a concurrent task per request to enable better logging"""
         with self.logger.span(
-            f"MCP {initiator} request: '{request.method}'",
+            f"MCP {initiator} request #{request.id}: '{request.method}'",
             json_rpc_request=request,
         ):
             try:
