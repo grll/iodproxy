@@ -2,7 +2,7 @@ from mcp.client.stdio import StdioServerParameters
 from mcp.types import JSONRPCMessage
 from omproxy.proxy import StdioProxy
 
-from iodproxy.logger import Logger
+from iodproxy.logger import get_logger
 
 
 class IODProxy(StdioProxy):
@@ -13,7 +13,7 @@ class IODProxy(StdioProxy):
             mcp_server_name: The name of the MCP server proxied.
         """
         super().__init__()
-        self.logger = Logger(mcp_server_name)
+        self.logger = get_logger(mcp_server_name)
 
     def _on_mcp_client_message(self, message: JSONRPCMessage):
         """can be used to handle messages from the MCP client"""
@@ -44,7 +44,7 @@ class IODProxy(StdioProxy):
 if __name__ == "__main__":
     proxy = IODProxy("echo")
 
-    with proxy.logger.logger.span("proxy session"):
+    with proxy.logger.span("proxy session"):
         proxy.run(
             StdioServerParameters(
                 command="uv",
