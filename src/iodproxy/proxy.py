@@ -44,15 +44,21 @@ class IODProxy(StdioProxy):
             try:
                 response = await asyncio.wait_for(future, timeout=self.timeout)
                 if isinstance(response, JSONRPCError):
-                    self.logger.info(
+                    self.logger.error(
                         "error received",
                         json_rpc_error=response,
                     )
                 else:
-                    self.logger.info(
-                        "response received",
-                        json_rpc_response=response,
-                    )
+                    if "isError" in response.result and response.result["isError"]:
+                        self.logger.error(
+                            "error received",
+                            json_rpc_error=response,
+                        )
+                    else:
+                        self.logger.info(
+                            "response received",
+                            json_rpc_response=response,
+                        )
             except asyncio.TimeoutError:
                 self.logger.error(f"request timed out after {self.timeout} seconds")
             except asyncio.CancelledError:
