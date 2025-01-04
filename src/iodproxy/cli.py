@@ -1,6 +1,9 @@
 import argparse
-from iodproxy.proxy import IODProxy
+import os
+
 from mcp.client.stdio import StdioServerParameters
+
+from iodproxy.proxy import IODProxy
 
 
 def main():
@@ -32,6 +35,7 @@ def main():
             StdioServerParameters(
                 command=args.command,
                 args=args.args,
+                env=os.environ,
             )
         )
 
